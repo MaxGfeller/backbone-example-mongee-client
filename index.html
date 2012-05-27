@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<link rel="stylesheet" href="css/default/style.css" />
+
+<title>Mongee</title>
+
+</head>
+<body>
+
+<div id="body-container">
+	<div id="head-bar">
+		<div id="search-bar">
+			<input id="search-box" class="search-inactive" type="text" value="Search for something..." />
+			<input type="button" class="button-small" value="search..." />
+		</div>
+		<div id="right-menu-bar">
+			<ul>
+				<li><a href="#">profile</a></li>
+				<li><a href="#">settings</a></li>
+				<li><a href="#">log out</a></li>
+			</ul>
+		</div>
+	</div>
+	<div id="content-container">
+		<div id="content-left">
+			<div id="profile-picture"></div>
+		</div>
+		<div id="content-main">
+			<div id="status">
+				<span class="username">Max Gfeller</span> 
+				<span class="status" id="current-user-status"></span>
+				<span class="date">today</span>
+				<span class="clear"><a href="#">delete</a></span>
+			</div>
+			<div id="menu-bar">
+				<ul>
+					<li class="active"><a href="#">stream</a></li>
+					<li class="inactive"><a href="#">info</a></li>
+					<li class="inactive"><a href="#">photos</a></li>
+				</ul>
+			</div>
+			<div id="posts-container">
+				<div id="poster">
+					What's new? <br />
+					<input id="new-post" type="text" />
+					<input id="submit-new-post" type="button" class="button-normal" value="submit" />
+				</div>
+				<div id="posts-body">
+					<!-- posts go here -->
+				</div>
+			</div>
+		</div>
+	</div>
+	<div id="content-bottom"></div>
+</div>
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script src="http://ajax.cdnjs.com/ajax/libs/underscore.js/1.3.3/underscore-min.js"></script>
+<script src="http://ajax.cdnjs.com/ajax/libs/backbone.js/0.9.2/backbone-min.js"></script>
+
+<script type="text/javascript">
+(function($) {
+	User = Backbone.Model.extend({
+		name: null,
+		firstName: null,
+		birthDate: null,
+		latestPost: null,
+		currentStatus: null,
+		posts: null,
+
+		postSomething: function(postModel) {
+			// set the id of the post
+			var generatedId = Math.round(Math.random() * 1000);
+			postModel.set("id", generatedId);
+
+			this.set("latestPost", postModel.get("date"));
+			this.get("posts").add(postModel);
+		}
+	});
+
+	Post = Backbone.Model.extend({
+		postId: null,
+		date: null,
+		content: null,
+		likes: null
+	});
+
+	Posts = Backbone.Collection.extend({
+		model: Post,
+		initialize: function(models, options) {
+			this.bind("add", options.view.addPostToStream);
+		}
+	});
+
+	AppView = Backbone.View.extend({
+		el: $("body"),
+		user: null,
+		initialize: function(userModel) {
+			console.log("initializing mongee app");
+
+			this.user = userModel;
+			this.user.set("posts", new Posts(null, { view: this }));
+
+			this.render();
+		},
+		render: function() {
+			// set the status
+			var currentStatus = this.user.get("currentStatus");
+
+			if(currentStatus == null)
+				currentStatus = "<span style='color: grey'>click to edit status</span>";
+
+			$("#current-user-status").html(currentStatus);
+		},
+		events: {
+			"click #submit-new-post": function() {
+				var new_post = $("#new-post").val().trim();
+				var post_date = new Date();
+
+				// clear field
+				$("#new-post").val("");
+
+				console.log("status update: " + new_post);
+
+				// cancel if user has entered nothing
+				if(new_post == "")
+					return
+
+				var newPost = new Post();
+				newPost.set({ date: new Date(), content: '<div id="post-entry"><img src="css/default/img/house.png" />&nbsp;&nbsp;&nbsp;<b>Max</b><br>' + new_post + ' <span class="date">am ' + post_date +'</span><div id="posts-addendum"><a href="#">i like</a> </div></div>' });
+
+				this.user.postSomething(newPost);
+			},
+			
+			"click #current-user-status": function() {
+				if(!($("#current-user-status").html().indexOf("<input") > -1)) {
+					$("#current-user-status").html("<input type='text' id='new-status' value='" + (this.user.get("currentStatus") == null ? "" : this.user.get("currentStatus")) + "'' /><button id='update-status-update'>update status</button><button id='cancel-status-update'>cancel</button>");
+				}
+			},
+
+			"click #update-status-update": function() {
+				var new_status = $("#new-status").val();
+
+				this.user.set("currentStatus", new_status);
+				
+				$("#current-user-status").html(new_status); // does not work?
+			},
+
+			"click #cancel-status-update": function() {
+				// why does that not work?
+				$("#current-user-status").html(this.user.get("currentStatus"));
+			}
+		},
+		addPostToStream: function(model) {
+			$("#posts-body").append(model.get("content"));
+		}
+	});
+
+	// initialize model and view
+	var userModel = new User({ firstName: "Max", name: "Gfeller" });
+	var appView = new AppView(userModel);
+
+})(jQuery);
+</script>
+
+</body>
+</html>
